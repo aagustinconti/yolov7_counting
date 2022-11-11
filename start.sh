@@ -2,6 +2,9 @@
 
 ######## Host PC ########
 
+# sudo chmod +x start.sh
+# sudo chmod +x ./dependencies_files/dependencies.sh
+
 # Do the complete instalation of Docker.
 
 # 1. Install: https://docs.docker.com/engine/install/ubuntu/
@@ -26,7 +29,7 @@
 
 # Create the image of torch
 cd ./dependencies_files
-docker build docker build -t yolov7_detect_track_count
+docker build -t yolov7_detect_track_count .
 cd ..
 
 # And then run

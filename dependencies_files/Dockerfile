@@ -2,12 +2,17 @@
 FROM pytorch/pytorch:latest
 
 # Copy the dependencies directory
-COPY ./dependencies_files /dependencies_files_docker
+COPY . /dependencies_files_docker
 
 # Set the working directory
 WORKDIR /dependencies_files_docker
 
 # Install dependencies
-RUN pip install -r ./dependencies_files_docker/requirements.txt
-RUN bash ./dependencies_files_docker/dependencies.sh
+RUN pip install -r requirements.txt
+RUN chmod +x dependencies.sh
+RUN bash dependencies.sh
+RUN cp -f ./upsampling.py /opt/conda/lib/python3.7/site-packages/torch/nn/modules/upsampling.py
+
+# To go to the working directory
+WORKDIR /workspace
 
