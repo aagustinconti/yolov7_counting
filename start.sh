@@ -2,8 +2,8 @@
 
 ######## Host PC ########
 
-# sudo chmod +x start.sh
-# sudo chmod +x ./dependencies_files/dependencies.sh
+# Pre run
+# 1. sudo chmod +x start.sh
 
 # Do the complete instalation of Docker.
 
@@ -24,7 +24,7 @@
 
 # Pull nvidia-gpu image
 
-# Instalation guide: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html
+# 1. Instalation guide: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html
 
 
 # Create the image of torch
@@ -36,5 +36,5 @@ cd ..
 # 1. To allow the use of screen
 xhost +
 
-# 2.  To run the image
+# 2. To run the image
 docker run --gpus all --rm -it -e DISPLAY=$DISPLAY -v  $PWD:/workspace -v /tmp/.X11-unix:/tmp/.X11-unix:rw --device="/dev/video0:/dev/video0"  yolov7_detect_track_count:latest
