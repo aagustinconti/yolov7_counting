@@ -87,6 +87,8 @@ class YoloSortCount():
         self.stopped = False
         self.avg_fps = 0
 
+        self.result = None
+
 
     def load_device(self, graphic_card):
 
@@ -149,8 +151,12 @@ class YoloSortCount():
             raise ImportError(
                 'Error while trying read the video. Please check that.')
 
-    def load_save_vid(self):
-        return True
+    def load_save_vid(self, save_loc,orig_w,orig_h):
+        
+        result = cv2.VideoWriter(save_loc+'.avi',
+                                 cv2.VideoWriter_fourcc(*'MJPG'),
+                                 10, (orig_w, orig_h))
+        return result
 
     def load_roi(self):
         # Call this method previously to call it in run method
@@ -174,7 +180,7 @@ class YoloSortCount():
         self.cap, self.orig_w, self.orig_h, self.orig_fps = self.load_video_capture(self.video_path)
 
         if self.save_vid:
-            self.load_save_vid()
+            self.result = self.load_save_vid(self.save_loc,self.orig_w,self.orig_h)
 
         # Run detection
         while (self.cap.isOpened()):
