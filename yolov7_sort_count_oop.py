@@ -41,7 +41,7 @@ class YoloSortCount():
         self.save_vid = False
         self.save_loc = "result"
 
-        self.model_path = 'yolov7.pt'
+        self.model_path = 'pretrained_weights/yolov7.pt'
         self.graphic_card = 0
         self.class_ids = []
         self.img_sz = 640
@@ -72,6 +72,7 @@ class YoloSortCount():
         self.cap = None
         self.orig_w = None
         self.orig_h = None
+        self.orig_fps = None
 
         self.frame_count = 0
         self.fps = 0
@@ -86,9 +87,8 @@ class YoloSortCount():
         self.stopped = False
         self.avg_fps = 0
 
-        return True
 
-    def load_device(graphic_card):
+    def load_device(self, graphic_card):
 
         try:
             device = torch.device("cuda:"+str(graphic_card))
@@ -98,7 +98,7 @@ class YoloSortCount():
             raise SystemError(
                 'Error while trying to use Graphic Card. Please check that it is available.')
 
-    def load_detection_model(model_path, device):
+    def load_detection_model(self, model_path, device):
 
         try:
 
@@ -120,7 +120,7 @@ class YoloSortCount():
             raise ImportError(
                 'Error while trying to load the detection model. Please check that.')
 
-    def load_tracking_model(deep_sort_model, max_dist, max_iou_distance, max_age, n_init, nn_budget):
+    def load_tracking_model(self, deep_sort_model, max_dist, max_iou_distance, max_age, n_init, nn_budget):
         try:
             deepsort = DeepSort(deep_sort_model,
                                 max_dist=max_dist,
@@ -133,33 +133,45 @@ class YoloSortCount():
             raise ImportError(
                 'Error while trying to load the tracking model. Please check that.')
 
-    def load_video_capture():
-        # return cap, orig_w, orig_h, orig_fps
-        return
+    def load_video_capture(self, video_path):
 
-    def load_save_vid():
-        return
+        try:
 
-    def load_roi():
+            cap = cv2.VideoCapture(video_path)
+
+            orig_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            orig_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            orig_fps = cap.get(cv2.CAP_PROP_FPS) % 100
+
+            return cap, orig_w, orig_h, orig_fps
+        
+        except Exception as err:
+            raise ImportError(
+                'Error while trying read the video. Please check that.')
+
+    def load_save_vid(self):
+        return True
+
+    def load_roi(self):
         # Call this method previously to call it in run method
-        return
+        return True
 
-    def detect():
-        return
+    def detect(self):
+        return True
 
-    def count():
-        return
+    def count(self):
+        return True
 
     def run(self):
 
-        self.device = self.load_device()
+        self.device = self.load_device(self.graphic_card)
 
         self.detection_model, self.names = self.load_detection_model(
             self.model_path, self.device)
         self.tracking_model = self.load_tracking_model(
             self.deep_sort_model, self.ds_max_dist, self.ds_max_iou_distance, self.ds_max_age, self.ds_n_init, self.ds_nn_budget)
 
-        self.cap, self.orig_w, self.orig_h = self.load_video_capture()
+        self.cap, self.orig_w, self.orig_h, self.orig_fps = self.load_video_capture(self.video_path)
 
         if self.save_vid:
             self.load_save_vid()
@@ -168,13 +180,13 @@ class YoloSortCount():
         while (self.cap.isOpened()):
             break
 
-        return
+        return True
 
     def __str__(self):
 
         if self.show_configs:
 
-            return_str = f"""
+            return_str = f"""\n
 
             Video path selected: {str(self.video_path)}\n\n
             
@@ -198,10 +210,13 @@ class YoloSortCount():
             Deep Sort model selected: {str(self.deep_sort_model)}\n
             Deep Sort max. distance selected: {str(self.ds_max_dist)}\n
             Deep Sort max. age selected: {str(self.ds_max_age)}\n
-            Deep Sort color selected: {str(self.ds_color)}\n\n        
+            Deep Sort color selected: {str(self.ds_color)}\n\n
+      
             """
 
             return return_str
+        else:
+            return "\n\nThis is an instance of the class YoloSortCount().\n\n"
 
 
 
@@ -212,3 +227,5 @@ test = YoloSortCount()
 test.show_configs = True
 
 print(test)
+
+test.run()
