@@ -29,11 +29,18 @@
 
 # Create the image of torch
 
-echo "Building the Docker Image..."
+echo "Checking if the Image already exists..."
 
-cd ./dependencies
-docker build -t yolov7_detect_track_count .
-cd ..
+if [[ "$(docker image inspect yolov7_detect_track_count:latest 2> /dev/null)" == "" ]]; then
+
+    echo "The image doesn't exist. Building the Docker Image..."
+
+    cd ./dependencies
+    docker build -t yolov7_detect_track_count .
+    cd ..
+
+fi
+
 
 # And then run
 # 1. To allow the use of screen
