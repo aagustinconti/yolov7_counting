@@ -321,12 +321,54 @@ class YoloSortCount():
                 detection = self.YoloDetect(self.frame, self.detection_model, self.device, self.names,
                                             self.show_img, self.color, self.img_sz, self.class_ids, self.conf_thres, self.iou_thres)
 
-                detection.det_out_coords
-                detection.det_out_classes
-                detection.det_delta_time
-                print(detection)
+                
+                if detection.det_out_coords != []:
 
-            break
+                    # Sort model
+
+                    # Count
+
+
+                    # Calculate fps (Aproximate: 25FPS GEFORCE 1060 Max-Q Design)
+                    self.fps = 1 / (detection.det_delta_time) #+ exec_time_sort)
+
+                    self.total_fps += self.fps
+                    self.frame_count += 1
+
+                    # Show the processed frame
+                    if self.show_img:
+
+                        # draw ROI
+                        #draw_roi(roi, roi_color, frame)
+
+                        # draw fps
+                        cv2.putText(self.frame, f"{self.fps:.3f} FPS (YOLO + SORT)", (15, 30), cv2.FONT_HERSHEY_SIMPLEX,
+                                    0.5, self.color, 1)
+
+                        # draw counter
+                        #counter_text = [[key, self.names[key], self.classes_after_ds[key]]
+                        #                for key in classes_after_ds.keys()]
+                        #cv2.putText(frame, f"COUNTER = {counter_text}", (15, 50), cv2.FONT_HERSHEY_SIMPLEX,
+                        #            0.5, color, 1)
+
+                        # show the frame
+                        cv2.imshow('PROCESSED FRAME', self.frame)
+
+                        # wait q to exit
+                        if self.hold_img:
+                            if cv2.waitKey(0) & 0xFF == ord('q'):
+                                self.stopped = True
+                                break
+                        else:
+                            if cv2.waitKey(1) & 0xFF == ord('q'):
+                                self.stopped = True
+                                break
+            
+            else:
+                self.stopped = False
+                break
+
+            #break
 
         return True
 
@@ -359,6 +401,7 @@ class YoloSortCount():
             Deep Sort max. distance selected: {str(self.ds_max_dist)}\n
             Deep Sort max. age selected: {str(self.ds_max_age)}\n
             Deep Sort color selected: {str(self.ds_color)}\n\n
+
       
             """
 
@@ -371,6 +414,7 @@ class YoloSortCount():
 test = YoloSortCount()
 
 test.show_configs = True
+test.class_ids = [0]
 
 print(test)
 
