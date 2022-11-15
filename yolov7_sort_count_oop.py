@@ -89,7 +89,6 @@ class YoloSortCount():
 
         self.result = None
 
-
     def load_device(self, graphic_card):
 
         try:
@@ -146,13 +145,13 @@ class YoloSortCount():
             orig_fps = cap.get(cv2.CAP_PROP_FPS) % 100
 
             return cap, orig_w, orig_h, orig_fps
-        
+
         except Exception as err:
             raise ImportError(
                 'Error while trying read the video. Please check that.')
 
-    def load_save_vid(self, save_loc,orig_w,orig_h):
-        
+    def load_save_vid(self, save_loc, orig_w, orig_h):
+
         result = cv2.VideoWriter(save_loc+'.avi',
                                  cv2.VideoWriter_fourcc(*'MJPG'),
                                  10, (orig_w, orig_h))
@@ -162,8 +161,125 @@ class YoloSortCount():
         # Call this method previously to call it in run method
         return True
 
-    def detect(self):
-        return True
+    class YoloDetect():
+
+        def __init__(self, frame, model, device, names, show_img, color, img_sz, class_ids, conf_thres, iou_thres):
+
+            # Frame
+
+            self.det_out_frame = frame
+
+            # initialize vectors
+            self.det_out_coords = []
+            self.det_out_classes = []
+
+            img = cv2.cvtColor(self.det_out_frame, cv2.COLOR_BGR2RGB)
+
+            # reshape the frames to the adecuate w and h
+            img = letterbox(img, img_sz, stride=64, auto=True)[0]
+
+            # get image data to use for rescaling
+            img0 = img.copy()
+
+            # transform the image to tensor and send the tensor of the image to the device
+            img = transforms.ToTensor()(img)
+            img = torch.tensor(np.array([img.numpy()]))
+            img = img.to(device)
+            img = img.half()
+
+            # time to count fps
+            start_time = time.time()
+
+            # get the output of the model
+            with torch.no_grad():
+                pred, _ = model(img)
+
+            # calculate fps
+            end_time = time.time()
+
+            self.det_delta_time = end_time - start_time
+
+            # remove the noise of the output (NMS: a technique to filter the predictions of object detectors.)
+            pred = non_max_suppression(pred, conf_thres, iou_thres)
+
+            # process the information of the filtered output and return the main characteristics [batch_id, class_id, x, y, w, h, conf]
+            self.det_output = output_to_keypoint(pred)
+
+            # for detection in frame
+            for idx in range(self.det_output.shape[0]):
+
+                # Separate by class id
+                if (int(self.det_output[idx][1]) in class_ids) or (class_ids == []):
+
+                    # Rescale boxes (Rescale coords (xyxy) from img0 to frame)
+                    self.det_output[idx][2:6] = self.scale_coords_custom(
+                        img0.shape[0:2], self.det_output[idx][2:6], self.det_out_frame.shape).round()
+
+                    # generate coord to bounding boxes
+                    xmin, ymin = (self.det_output[idx, 2]-self.det_output[idx, 4] /
+                                  2), (self.det_output[idx, 3]-self.det_output[idx, 5]/2)
+                    xmax, ymax = (self.det_output[idx, 2]+self.det_output[idx, 4] /
+                                  2), (self.det_output[idx, 3]+self.det_output[idx, 5]/2)
+
+                    # xyxy
+                    coord_bb = [xmin, ymin, xmax, ymax]
+
+                    # [class id, class name, confidence]
+                    class_detected = [names[int(self.det_output[idx][1])], int(
+                        self.det_output[idx][1]), round(self.det_output[idx][6], 2)]
+
+                    # fill the output list
+                    self.det_out_coords.append(coord_bb)
+                    self.det_out_classes.append(class_detected)
+
+                    # draw bounding boxes, classnames and confidence
+                    if show_img:
+                        self.draw_bbox(self.det_out_frame, coord_bb, color,
+                                       class_detected[0], class_detected[2])
+
+        def scale_coords_custom(self, img1_shape, coords, img0_shape):
+
+            gain = min(img1_shape[0] / img0_shape[0],
+                       img1_shape[1] / img0_shape[1])  # gain  = old / new
+            pad = (img1_shape[1] - img0_shape[1] * gain) / \
+                2, (img1_shape[0] - img0_shape[0] * gain) / 2  # wh padding
+
+            coords[0] -= pad[0]  # x padding
+            coords[2] -= pad[0]  # x padding
+            coords[1] -= pad[1]  # y padding
+            coords[3] -= pad[1]  # y padding
+            coords[:] /= gain
+
+            return coords
+
+        def draw_bbox(self, frame, coords, color, names, confidence):
+
+            # draw bounding box
+            frame = cv2.rectangle(
+                frame,
+                (int(coords[0]), int(coords[1])),
+                (int(coords[2]), int(coords[3])),
+                color=color,
+                thickness=1,
+                lineType=cv2.LINE_AA
+            )
+
+            # write confidence and class names
+            cv2.putText(frame, f"{names}: {confidence}", (int(coords[0]), int(coords[1])-5), cv2.FONT_HERSHEY_SIMPLEX,
+                        0.5, color, 1)
+
+            return True
+
+        def __str__(self):
+
+            output_text_detection = f"""
+            BBxes coords: {self.det_out_coords}\n
+            Classes Detected: {self.det_out_classes}\n
+            Exec. time YOLOv7x model: {self.det_delta_time} [s]\n\n
+            
+            """
+
+            return output_text_detection
 
     def count(self):
         return True
@@ -177,13 +293,34 @@ class YoloSortCount():
         self.tracking_model = self.load_tracking_model(
             self.deep_sort_model, self.ds_max_dist, self.ds_max_iou_distance, self.ds_max_age, self.ds_n_init, self.ds_nn_budget)
 
-        self.cap, self.orig_w, self.orig_h, self.orig_fps = self.load_video_capture(self.video_path)
+        self.cap, self.orig_w, self.orig_h, self.orig_fps = self.load_video_capture(
+            self.video_path)
 
         if self.save_vid:
-            self.result = self.load_save_vid(self.save_loc,self.orig_w,self.orig_h)
+            self.result = self.load_save_vid(
+                self.save_loc, self.orig_w, self.orig_h)
 
         # Run detection
         while (self.cap.isOpened()):
+
+            # get the frames
+            ret, self.frame = self.cap.read()
+
+            # To show image correctly (IE: web camera)
+            if self.inv_h_frame:
+                self.frame = cv2.flip(self.frame, 1)
+
+            # if the video has not finished yet
+            if ret:
+
+                detection = self.YoloDetect(self.frame, self.detection_model, self.device, self.names,
+                                            self.show_img, self.color, self.img_sz, self.class_ids, self.conf_thres, self.iou_thres)
+
+                detection.det_out_coords
+                detection.det_out_classes
+                detection.det_delta_time
+                print(detection)
+
             break
 
         return True
@@ -225,9 +362,7 @@ class YoloSortCount():
             return "\n\nThis is an instance of the class YoloSortCount().\n\n"
 
 
-
 # Test
-
 test = YoloSortCount()
 
 test.show_configs = True
