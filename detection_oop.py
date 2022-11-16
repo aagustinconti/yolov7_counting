@@ -97,26 +97,7 @@ class YoloDetect():
             raise ImportError(
                 'Error while trying instantiate the detection object. Please check that.')
 
-    def load_detection_model(self, model_path, device):
-
-        try:
-            # Load all characteristics of YOLOv7x model
-            weigths = torch.load(model_path)
-
-            # Send model characteristics to the graphic card
-            model = weigths['model']
-            model = model.half().to(device)
-            _ = model.eval()
-
-            # Get model class names
-            names = model.module.names if hasattr(
-                model, 'module') else model.names
-
-            return model, names
-
-        except Exception as err:
-            raise ImportError(
-                'Error while trying to load the detection model. Please check that.')
+    
 
     def scale_coords_custom(self, img1_shape, coords, img0_shape):
 

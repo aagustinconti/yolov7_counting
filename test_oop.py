@@ -4,12 +4,12 @@ from yolov7_sort_count_oop import YoloSortCount
 test = YoloSortCount()
 
 test.show_configs = True
-test.show_detections = True
-test.show_tracking = True
-test.show_count = True
-
-test.class_ids = [0]
+test.class_ids = []
+test.roi = [0,0,100,100]
 
 print(test)
+print(test.detection)
+print(test.tracking)
+print(test.count)
 
 test.run()

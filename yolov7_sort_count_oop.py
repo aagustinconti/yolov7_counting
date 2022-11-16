@@ -4,6 +4,9 @@
 import torch
 import torchvision
 
+# Deep Sort
+from deep_sort.deep_sort import DeepSort
+
 # Basics
 import cv2
 
@@ -41,7 +44,7 @@ class YoloSortCount():
         self.conf_thres = 0.25
         self.iou_thres = 0.65
 
-        self.roi = [0, 0, 1, 1]
+        self.roi = [0, 0, 100, 100]
         self.roi_color = (255, 255, 255)
 
         self.deep_sort_model = "osnet_x1_0"
@@ -53,9 +56,6 @@ class YoloSortCount():
         self.ds_color = (0, 0, 255)
 
         self.show_configs = False
-        self.show_detections = False
-        self.show_tracking = False
-        self.show_count = False
 
         # Pre defined
         self.names = None
@@ -69,7 +69,9 @@ class YoloSortCount():
 
         self.out_frame = None
 
-        self.result = None
+        self.detection = None
+        self.tracking = None
+        self.count = None
 
     def load_device(self, graphic_card):
 
@@ -108,21 +110,55 @@ class YoloSortCount():
         # Call this method previously to call it in run method
         return True
 
+    def load_detection_model(self, model_path, device):
+
+        try:
+            # Load all characteristics of YOLOv7x model
+            weigths = torch.load(model_path)
+
+            # Send model characteristics to the graphic card
+            model = weigths['model']
+            model = model.half().to(device)
+            _ = model.eval()
+
+            # Get model class names
+            names = model.module.names if hasattr(
+                model, 'module') else model.names
+
+            return model, names
+
+        except Exception as err:
+            raise ImportError(
+                'Error while trying to load the detection model. Please check that.')
+
+    def load_tracking_model(self, deep_sort_model, max_dist, max_iou_distance, max_age, n_init, nn_budget):
+        try:
+            deepsort = DeepSort(deep_sort_model,
+                                max_dist=max_dist,
+                                max_iou_distance=max_iou_distance,
+                                max_age=max_age, n_init=n_init, nn_budget=nn_budget,
+                                use_cuda=True)
+            return deepsort
+
+        except Exception as err:
+            raise ImportError(
+                'Error while trying to load the tracking model. Please check that.')
+
     def run(self):
 
         device = self.load_device(self.graphic_card)
 
-        detection_model, self.names = YoloDetect.load_detection_model(
+        detection_model, self.names = self.load_detection_model(
             self.model_path, device)
 
-        tracking_model = DeepSortTrack.load_tracking_model(
+        tracking_model = self.load_tracking_model(
             self.deep_sort_model, self.ds_max_dist, self.ds_max_iou_distance, self.ds_max_age, self.ds_n_init, self.ds_nn_budget)
 
         cap, self.orig_w, self.orig_h, self.orig_fps = self.load_video_capture(
             self.video_path)
 
         if self.save_vid:
-            self.result = self.load_save_vid(
+            result = self.load_save_vid(
                 self.save_loc, self.orig_w, self.orig_h)
 
         frame_count = 0
@@ -142,31 +178,22 @@ class YoloSortCount():
             if ret:
 
                 # Run Detection model
-                detection = YoloDetect(self.frame, detection_model, device, self.names, self.show_img,
-                                       self.color, self.img_sz, self.class_ids, self.conf_thres, self.iou_thres)
+                self.detection = YoloDetect(self.frame, detection_model, device, self.names, self.show_img,
+                                            self.color, self.img_sz, self.class_ids, self.conf_thres, self.iou_thres)
 
-                if self.show_detections:
-                    detection.__str__()
-
-                if detection.det_out_coords != []:
+                if self.detection.det_out_coords != []:
 
                     # Run Sort model
-                    tracking = DeepSortTrack(detection.det_out_coords, detection.det_out_classes,
-                                             tracking_model, detection.det_out_frame, self.show_img, self.ds_color, self.names)
-
-                    if self.show_tracking:
-                        tracking.__str__()
+                    self.tracking = DeepSortTrack(self.detection.det_out_coords, self.detection.det_out_classes,
+                                                  tracking_model, self.detection.det_out_frame, self.show_img, self.ds_color, self.names)
 
                     # Count
-                    count = Count(tracking.ds_out_tracking,
-                                  self.roi, self.names)
-
-                    if self.show_count:
-                        count.__str__()
+                    self.count = Count(self.tracking.ds_out_tracking,
+                                       self.roi, self.names)
 
                     # Calculate fps (Aproximate: 25-30 FPS GEFORCE 1060 Max-Q Design)
-                    fps = 1 / (detection.det_delta_time +
-                               tracking.ds_delta_time)
+                    fps = 1 / (self.detection.det_delta_time +
+                               self.tracking.ds_delta_time)
 
                     total_fps += fps
                     frame_count += 1
@@ -174,7 +201,7 @@ class YoloSortCount():
                     # Show the processed frame
                     if self.show_img:
 
-                        self.out_frame = tracking.ds_out_frame
+                        self.out_frame = self.tracking.ds_out_frame
 
                         # draw ROI
                         #draw_roi(roi, roi_color, frame)
@@ -184,7 +211,7 @@ class YoloSortCount():
                                     0.5, self.color, 1)
 
                         # draw counter
-                        cv2.putText(self.out_frame, f"COUNTER = {count.counter_text}", (15, 50), cv2.FONT_HERSHEY_SIMPLEX,
+                        cv2.putText(self.out_frame, f"COUNTER = {self.count.counter_text}", (15, 50), cv2.FONT_HERSHEY_SIMPLEX,
                                     0.5, self.color, 1)
 
                         # show the frame
@@ -205,14 +232,14 @@ class YoloSortCount():
                 break
 
             if self.save_vid:
-                self.result.write(self.frame)
+                result.write(self.frame)
 
         # Close the videocapture
         cap.release()
 
         # To save the video
         if self.save_vid:
-            self.result.release()
+            result.release()
 
         # Avg fps
         if frame_count > 0:
@@ -251,10 +278,6 @@ class YoloSortCount():
             Deep Sort max. distance selected: {str(self.ds_max_dist)}\n
             Deep Sort max. age selected: {str(self.ds_max_age)}\n
             Deep Sort color selected: {str(self.ds_color)}\n\n
-
-            Show Detections: {self.show_detections}
-            Show Tracking: {self.show_tracking}
-            Show Count: {self.show_count}
 
             """
 

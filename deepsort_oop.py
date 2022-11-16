@@ -1,8 +1,5 @@
 # https://github.com/dongdv95/yolov5/blob/master/Yolov5_DeepSort_Pytorch/track.py
 
-# Deep Sort
-from deep_sort.deep_sort import DeepSort
-
 # Basics
 import cv2
 import numpy as np
@@ -60,18 +57,6 @@ class DeepSortTrack():
             raise ImportError(
                 'Error while trying instantiate the tracking object. Please check that.')
 
-    def load_tracking_model(self, deep_sort_model, max_dist, max_iou_distance, max_age, n_init, nn_budget):
-        try:
-            deepsort = DeepSort(deep_sort_model,
-                                max_dist=max_dist,
-                                max_iou_distance=max_iou_distance,
-                                max_age=max_age, n_init=n_init, nn_budget=nn_budget,
-                                use_cuda=True)
-            return deepsort
-
-        except Exception as err:
-            raise ImportError(
-                'Error while trying to load the tracking model. Please check that.')
 
     def xyxy2xywh(self, x):
         """

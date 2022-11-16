@@ -14,8 +14,8 @@ class Count():
             ds_class = detection[2]
 
             # To check if the ds_cpoint is into the roi
-            is_into_roi = (roi[0][0] < ds_cpoint[0] < roi[1][0]) and (
-                roi[0][1] < ds_cpoint[1] < roi[1][1])
+            is_into_roi = (roi[0] < ds_cpoint[0] < roi[2]) and (
+                roi[1] < ds_cpoint[1] < roi[3])
 
             # If is into the roi
             if is_into_roi:
