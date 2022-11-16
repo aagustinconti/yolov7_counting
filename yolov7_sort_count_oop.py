@@ -1,24 +1,16 @@
 # https://learnopencv.com/yolov7-object-detection-paper-explanation-and-inference/
 
+# Pytorch
 import torch
 import torchvision
-from torchvision import transforms
 
+# Basics
 import cv2
-import numpy as np
-import time
 
-# Utilities
-from utils.general import non_max_suppression
-from utils.datasets import letterbox
-from utils.plots import output_to_keypoint
-
-# Custom functions
-from utils.custom_functions import detect, draw_roi, load_roi
-from tracker.tracking_function import tracking, load_deepsort
-
-# Deep Sort
-from deep_sort.deep_sort import DeepSort
+# Classes
+from detection_oop import YoloDetect
+from deepsort_oop import DeepSortTrack
+from count_oop import Count
 
 
 """
@@ -61,31 +53,21 @@ class YoloSortCount():
         self.ds_color = (0, 0, 255)
 
         self.show_configs = False
+        self.show_detections = False
+        self.show_tracking = False
+        self.show_count = False
 
         # Pre defined
-        self.device = None
-        self.detection_model = None
         self.names = None
 
-        self.tracking_model = None
-
-        self.cap = None
         self.orig_w = None
         self.orig_h = None
         self.orig_fps = None
 
-        self.frame_count = 0
-        self.fps = 0
-        self.total_fps = 0
-
-        self.exec_time_yolo = None
-        self.exec_time_ds = None
-
-        self.counted = []
-        self.classes_after_ds = {}
-
         self.stopped = False
         self.avg_fps = 0
+
+        self.out_frame = None
 
         self.result = None
 
@@ -98,41 +80,6 @@ class YoloSortCount():
         except Exception as err:
             raise SystemError(
                 'Error while trying to use Graphic Card. Please check that it is available.')
-
-    def load_detection_model(self, model_path, device):
-
-        try:
-
-            # Load all characteristics of YOLOv7x model
-            weigths = torch.load(model_path)
-
-            # Send model characteristics to the graphic card
-            model = weigths['model']
-            model = model.half().to(device)
-            _ = model.eval()
-
-            # Get model class names
-            names = model.module.names if hasattr(
-                model, 'module') else model.names
-
-            return model, names
-
-        except Exception as err:
-            raise ImportError(
-                'Error while trying to load the detection model. Please check that.')
-
-    def load_tracking_model(self, deep_sort_model, max_dist, max_iou_distance, max_age, n_init, nn_budget):
-        try:
-            deepsort = DeepSort(deep_sort_model,
-                                max_dist=max_dist,
-                                max_iou_distance=max_iou_distance,
-                                max_age=max_age, n_init=n_init, nn_budget=nn_budget,
-                                use_cuda=True)
-            return deepsort
-
-        except Exception as err:
-            raise ImportError(
-                'Error while trying to load the tracking model. Please check that.')
 
     def load_video_capture(self, video_path):
 
@@ -161,198 +108,87 @@ class YoloSortCount():
         # Call this method previously to call it in run method
         return True
 
-    class YoloDetect():
-
-        def __init__(self, frame, model, device, names, show_img, color, img_sz, class_ids, conf_thres, iou_thres):
-
-            try:
-                # Frame
-
-                self.det_out_frame = frame
-
-                # initialize vectors
-                self.det_out_coords = []
-                self.det_out_classes = []
-
-                img = cv2.cvtColor(self.det_out_frame, cv2.COLOR_BGR2RGB)
-
-                # reshape the frames to the adecuate w and h
-                img = letterbox(img, img_sz, stride=64, auto=True)[0]
-
-                # get image data to use for rescaling
-                img0 = img.copy()
-
-                # transform the image to tensor and send the tensor of the image to the device
-                img = transforms.ToTensor()(img)
-                img = torch.tensor(np.array([img.numpy()]))
-                img = img.to(device)
-                img = img.half()
-
-                # time to count fps
-                start_time = time.time()
-
-                # get the output of the model
-                with torch.no_grad():
-                    pred, _ = model(img)
-
-                # calculate fps
-                end_time = time.time()
-
-                self.det_delta_time = end_time - start_time
-
-                # remove the noise of the output (NMS: a technique to filter the predictions of object detectors.)
-                pred = non_max_suppression(pred, conf_thres, iou_thres)
-
-                # process the information of the filtered output and return the main characteristics [batch_id, class_id, x, y, w, h, conf]
-                self.det_output = output_to_keypoint(pred)
-
-                # for detection in frame
-                for idx in range(self.det_output.shape[0]):
-
-                    # Separate by class id
-                    if (int(self.det_output[idx][1]) in class_ids) or (class_ids == []):
-
-                        # Rescale boxes (Rescale coords (xyxy) from img0 to frame)
-                        self.det_output[idx][2:6] = self.scale_coords_custom(
-                            img0.shape[0:2], self.det_output[idx][2:6], self.det_out_frame.shape).round()
-
-                        # generate coord to bounding boxes
-                        xmin, ymin = (self.det_output[idx, 2]-self.det_output[idx, 4] /
-                                      2), (self.det_output[idx, 3]-self.det_output[idx, 5]/2)
-                        xmax, ymax = (self.det_output[idx, 2]+self.det_output[idx, 4] /
-                                      2), (self.det_output[idx, 3]+self.det_output[idx, 5]/2)
-
-                        # xyxy
-                        coord_bb = [xmin, ymin, xmax, ymax]
-
-                        # [class id, class name, confidence]
-                        class_detected = [names[int(self.det_output[idx][1])], int(
-                            self.det_output[idx][1]), round(self.det_output[idx][6], 2)]
-
-                        # fill the output list
-                        self.det_out_coords.append(coord_bb)
-                        self.det_out_classes.append(class_detected)
-
-                        # draw bounding boxes, classnames and confidence
-                        if show_img:
-                            self.draw_bbox(self.det_out_frame, coord_bb, color,
-                                           class_detected[0], class_detected[2])
-
-            except Exception as err:
-                raise ImportError(
-                    'Error while trying instantiate the detection object. Please check that.')
-
-        def scale_coords_custom(self, img1_shape, coords, img0_shape):
-
-            gain = min(img1_shape[0] / img0_shape[0],
-                       img1_shape[1] / img0_shape[1])  # gain  = old / new
-            pad = (img1_shape[1] - img0_shape[1] * gain) / \
-                2, (img1_shape[0] - img0_shape[0] * gain) / 2  # wh padding
-
-            coords[0] -= pad[0]  # x padding
-            coords[2] -= pad[0]  # x padding
-            coords[1] -= pad[1]  # y padding
-            coords[3] -= pad[1]  # y padding
-            coords[:] /= gain
-
-            return coords
-
-        def draw_bbox(self, frame, coords, color, names, confidence):
-
-            # draw bounding box
-            frame = cv2.rectangle(
-                frame,
-                (int(coords[0]), int(coords[1])),
-                (int(coords[2]), int(coords[3])),
-                color=color,
-                thickness=1,
-                lineType=cv2.LINE_AA
-            )
-
-            # write confidence and class names
-            cv2.putText(frame, f"{names}: {confidence}", (int(coords[0]), int(coords[1])-5), cv2.FONT_HERSHEY_SIMPLEX,
-                        0.5, color, 1)
-
-            return True
-
-        def __str__(self):
-
-            output_text_detection = f"""
-            BBxes coords: {self.det_out_coords}\n
-            Classes Detected: {self.det_out_classes}\n
-            Exec. time YOLOv7x model: {self.det_delta_time} [s]\n\n
-            
-            """
-
-            return output_text_detection
-
-    def count(self):
-        return True
-
     def run(self):
 
-        self.device = self.load_device(self.graphic_card)
+        device = self.load_device(self.graphic_card)
 
-        self.detection_model, self.names = self.load_detection_model(
-            self.model_path, self.device)
-        self.tracking_model = self.load_tracking_model(
+        detection_model, self.names = YoloDetect.load_detection_model(
+            self.model_path, device)
+
+        tracking_model = DeepSortTrack.load_tracking_model(
             self.deep_sort_model, self.ds_max_dist, self.ds_max_iou_distance, self.ds_max_age, self.ds_n_init, self.ds_nn_budget)
 
-        self.cap, self.orig_w, self.orig_h, self.orig_fps = self.load_video_capture(
+        cap, self.orig_w, self.orig_h, self.orig_fps = self.load_video_capture(
             self.video_path)
 
         if self.save_vid:
             self.result = self.load_save_vid(
                 self.save_loc, self.orig_w, self.orig_h)
 
-        # Run detection
-        while (self.cap.isOpened()):
+        frame_count = 0
+        total_fps = 0
 
-            # get the frames
-            ret, self.frame = self.cap.read()
+        # Run detection
+        while (cap.isOpened()):
+
+            # Get frame
+            ret, self.frame = cap.read()
 
             # To show image correctly (IE: web camera)
             if self.inv_h_frame:
                 self.frame = cv2.flip(self.frame, 1)
 
-            # if the video has not finished yet
+            # If the video has not finished yet
             if ret:
 
-                detection = self.YoloDetect(self.frame, self.detection_model, self.device, self.names,
-                                            self.show_img, self.color, self.img_sz, self.class_ids, self.conf_thres, self.iou_thres)
+                # Run Detection model
+                detection = YoloDetect(self.frame, detection_model, device, self.names, self.show_img,
+                                       self.color, self.img_sz, self.class_ids, self.conf_thres, self.iou_thres)
 
-                
+                if self.show_detections:
+                    detection.__str__()
+
                 if detection.det_out_coords != []:
 
-                    # Sort model
+                    # Run Sort model
+                    tracking = DeepSortTrack(detection.det_out_coords, detection.det_out_classes,
+                                             tracking_model, detection.det_out_frame, self.show_img, self.ds_color, self.names)
+
+                    if self.show_tracking:
+                        tracking.__str__()
 
                     # Count
+                    count = Count(tracking.ds_out_tracking,
+                                  self.roi, self.names)
 
+                    if self.show_count:
+                        count.__str__()
 
-                    # Calculate fps (Aproximate: 25FPS GEFORCE 1060 Max-Q Design)
-                    self.fps = 1 / (detection.det_delta_time) #+ exec_time_sort)
+                    # Calculate fps (Aproximate: 25-30 FPS GEFORCE 1060 Max-Q Design)
+                    fps = 1 / (detection.det_delta_time +
+                               tracking.ds_delta_time)
 
-                    self.total_fps += self.fps
-                    self.frame_count += 1
+                    total_fps += fps
+                    frame_count += 1
 
                     # Show the processed frame
                     if self.show_img:
+
+                        self.out_frame = tracking.ds_out_frame
 
                         # draw ROI
                         #draw_roi(roi, roi_color, frame)
 
                         # draw fps
-                        cv2.putText(self.frame, f"{self.fps:.3f} FPS (YOLO + SORT)", (15, 30), cv2.FONT_HERSHEY_SIMPLEX,
+                        cv2.putText(self.out_frame, f"{fps:.3f} FPS (YOLO + SORT)", (15, 30), cv2.FONT_HERSHEY_SIMPLEX,
                                     0.5, self.color, 1)
 
                         # draw counter
-                        #counter_text = [[key, self.names[key], self.classes_after_ds[key]]
-                        #                for key in classes_after_ds.keys()]
-                        #cv2.putText(frame, f"COUNTER = {counter_text}", (15, 50), cv2.FONT_HERSHEY_SIMPLEX,
-                        #            0.5, color, 1)
+                        cv2.putText(self.out_frame, f"COUNTER = {count.counter_text}", (15, 50), cv2.FONT_HERSHEY_SIMPLEX,
+                                    0.5, self.color, 1)
 
                         # show the frame
-                        cv2.imshow('PROCESSED FRAME', self.frame)
+                        cv2.imshow('PROCESSED FRAME', self.out_frame)
 
                         # wait q to exit
                         if self.hold_img:
@@ -363,14 +199,28 @@ class YoloSortCount():
                             if cv2.waitKey(1) & 0xFF == ord('q'):
                                 self.stopped = True
                                 break
-            
+
             else:
                 self.stopped = False
                 break
 
-            #break
+            if self.save_vid:
+                self.result.write(self.frame)
 
-        return True
+        # Close the videocapture
+        cap.release()
+
+        # To save the video
+        if self.save_vid:
+            self.result.release()
+
+        # Avg fps
+        if frame_count > 0:
+            self.avg_fps = total_fps / frame_count
+
+        # Close all windows
+        if self.show_img:
+            cv2.destroyAllWindows()
 
     def __str__(self):
 
@@ -402,20 +252,13 @@ class YoloSortCount():
             Deep Sort max. age selected: {str(self.ds_max_age)}\n
             Deep Sort color selected: {str(self.ds_color)}\n\n
 
-      
+            Show Detections: {self.show_detections}
+            Show Tracking: {self.show_tracking}
+            Show Count: {self.show_count}
+
             """
 
             return return_str
+
         else:
-            return "\n\nThis is an instance of the class YoloSortCount().\n\n"
-
-
-# Test
-test = YoloSortCount()
-
-test.show_configs = True
-test.class_ids = [0]
-
-print(test)
-
-test.run()
+            pass
