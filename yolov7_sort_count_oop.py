@@ -13,6 +13,9 @@ import cv2
 # Logs
 import logging
 
+# Time
+import time
+
 # Classes
 from detection_oop import YoloDetect
 from deepsort_oop import DeepSortTrack
@@ -33,6 +36,7 @@ class YoloSortCount():
         self.video_path = 0
 
         self.show_img = True
+        self.ends_in_sec = None
         self.inv_h_frame = False
         self.hold_img = False
 
@@ -88,6 +92,7 @@ class YoloSortCount():
         self.show_detection = False
         self.show_tracking = False
         self.show_count = False
+
 
     def load_device(self, graphic_card):
 
@@ -195,6 +200,8 @@ class YoloSortCount():
 
         frame_count = 0
         total_fps = 0
+        
+        start_ends_in_sec = time.time()
 
         # Run detection
         while (cap.isOpened()):
@@ -274,14 +281,30 @@ class YoloSortCount():
                         # wait q to exit
                         if self.hold_img:
                             if cv2.waitKey(0) & 0xFF == ord('q'):
+                                logging.info('Exiting by keyboard...')
                                 self.stopped = True
                                 break
                         else:
                             if cv2.waitKey(1) & 0xFF == ord('q'):
+                                logging.info('Exiting by keyboard...')
                                 self.stopped = True
                                 break
+                    else:
+                        # ends when the time of excecution is greather than ends_in_sec 
+                        end_ends_in_sec = time.time()
+                        
+                        if self.ends_in_sec == None:
+                            logging.critical('If show_img = False you need to define "self.ends_in_sec" [secs].')
+                            break
+                        else:
+                            if (end_ends_in_sec - start_ends_in_sec) >= self.ends_in_sec:
+                                logging.info(f'Stopping... The time exeeds the defined excecution time of {self.ends_in_sec} [seconds]...')
+                                self.stopped = True
+                                break
+                                        
 
             else:
+                logging.info('The video has finished.')
                 self.stopped = False
                 break
 
