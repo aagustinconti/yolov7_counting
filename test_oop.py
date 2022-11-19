@@ -5,8 +5,8 @@ import cv2
 # Test
 test = YoloSortCount()
 
-
-
+# Source
+test.video_path = 0 #"https://www.youtube.com/watch?v=yhkbg8p2Gts"
 
 # Show results
 test.show_img = True

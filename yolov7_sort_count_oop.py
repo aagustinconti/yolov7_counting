@@ -16,6 +16,10 @@ import logging
 # Time
 import time
 
+# YouTube videos
+
+import pafy
+
 # Classes
 from detection_oop import YoloDetect
 from deepsort_oop import DeepSortTrack
@@ -108,8 +112,28 @@ class YoloSortCount():
     def load_video_capture(self, video_path):
 
         try:
+            
+            logging.info('Loading the video capture...')
 
-            cap = cv2.VideoCapture(video_path)
+            if "https://www.youtube.com/" in str(video_path):
+
+                logging.info('YouTube video detected as source.')
+                video = pafy.new(video_path)
+                logging.info(f'YouTube video name: {video.title}')
+                
+                logging.info('Getting the video, remember thats maybe take a while...')
+                best = video.getbest(preftype="mp4")
+                cap = cv2.VideoCapture(best.url)
+                logging.info('YouTube video capture has been loaded.')
+
+            else:
+                if video_path == 0:
+                    logging.info('Source of the video: WebCamera')
+                else:
+                    logging.info(f'Source of the video: {video_path}')
+                
+                cap = cv2.VideoCapture(video_path)
+                logging.info('The video capture has been loaded.')
 
             orig_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             orig_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -219,10 +243,8 @@ class YoloSortCount():
 
                 logging.info('ROI has been loaded.')
         
-        logging.info('Loading the video capture...')
         cap, self.orig_w, self.orig_h, self.orig_fps = self.load_video_capture(
             self.video_path)
-        logging.info('The video capture has been loaded.')
 
         if self.save_vid:
             logging.info('Loading the results capture...')
@@ -342,7 +364,7 @@ class YoloSortCount():
                 break
 
             if self.save_vid:
-                logging.info('Writting the results...')
+                logging.info(f'Writting the results in {self.save_loc}...')
                 result.write(self.out_frame)
                 logging.info('The result video has been written.')
 
