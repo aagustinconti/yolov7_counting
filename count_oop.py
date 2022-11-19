@@ -1,10 +1,10 @@
 
 
 class Count():
-    def __init__(self, ds_output, roi, names) -> None:
+    def __init__(self, ds_output, roi, names, count_out_classes,counted) -> None:
 
-        self.count_out_classes = {}
-        counted = []
+        self.count_out_classes = count_out_classes
+        self.counted = counted
 
         for detection in ds_output:
 
@@ -21,29 +21,29 @@ class Count():
             if is_into_roi:
 
                 # fill the empty vector
-                if len(counted) == 0:
-                    counted.append([ds_id, ds_class])
+                if len(self.counted) == 0:
+                    self.counted.append([ds_id, ds_class])
 
                 # get the classes detected
                     self.count_out_classes = dict.fromkeys(
-                        [elem[1] for elem in counted], 0)
+                        [elem[1] for elem in self.counted], 0)
 
                     # count per class
-                    for elem in counted:
+                    for elem in self.counted:
                         self.count_out_classes[elem[1]] += 1
 
                 else:
                     # if the id is not in the list
-                    if (ds_id not in [elem[0] for elem in counted]):
+                    if (ds_id not in [elem[0] for elem in self.counted]):
                         # count object
-                        counted.append([ds_id, ds_class])
+                        self.counted.append([ds_id, ds_class])
 
                         # get the classes detected
                         self.count_out_classes = dict.fromkeys(
-                            [elem[1] for elem in counted], 0)
+                            [elem[1] for elem in self.counted], 0)
 
                         # count per class
-                        for elem in counted:
+                        for elem in self.counted:
                             self.count_out_classes[elem[1]] += 1
 
         self.counter_text = [[key, names[key], self.count_out_classes[key]]

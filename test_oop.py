@@ -5,11 +5,12 @@ test = YoloSortCount()
 
 test.show_configs = True
 test.class_ids = []
-test.roi = [0,0,100,100]
 
-print(test)
-print(test.detection)
-print(test.tracking)
-print(test.count)
+test.inv_h_frame = True
+test.roi = [200,200,400,300]
 
-test.run()
+test.conf_thres = 0.5
+
+
+
+print(test.run())

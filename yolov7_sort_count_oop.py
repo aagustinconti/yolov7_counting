@@ -44,7 +44,7 @@ class YoloSortCount():
         self.conf_thres = 0.25
         self.iou_thres = 0.65
 
-        self.roi = [0, 0, 100, 100]
+        self.roi = []
         self.roi_color = (255, 255, 255)
 
         self.deep_sort_model = "osnet_x1_0"
@@ -72,6 +72,9 @@ class YoloSortCount():
         self.detection = None
         self.tracking = None
         self.count = None
+
+        self.count_out_classes = {}
+        self.counted = []
 
     def load_device(self, graphic_card):
 
@@ -101,14 +104,16 @@ class YoloSortCount():
 
     def load_save_vid(self, save_loc, orig_w, orig_h):
 
-        result = cv2.VideoWriter(save_loc+'.avi',
-                                 cv2.VideoWriter_fourcc(*'MJPG'),
-                                 10, (orig_w, orig_h))
-        return result
+        try:
 
-    def load_roi(self):
-        # Call this method previously to call it in run method
-        return True
+            result = cv2.VideoWriter(save_loc+'.avi',
+                                     cv2.VideoWriter_fourcc(*'MJPG'),
+                                     10, (orig_w, orig_h))
+            return result
+
+        except Exception as err:
+            raise ImportError(
+                'Error while trying write the results. Please check that.')
 
     def load_detection_model(self, model_path, device):
 
@@ -188,8 +193,14 @@ class YoloSortCount():
                                                   tracking_model, self.detection.det_out_frame, self.show_img, self.ds_color, self.names)
 
                     # Count
+                    if not self.roi:
+                        self.roi = [0, 0, self.orig_w, self.orig_h]
+
                     self.count = Count(self.tracking.ds_out_tracking,
-                                       self.roi, self.names)
+                                       self.roi, self.names, self.count_out_classes, self.counted)
+                    
+                    self.count_out_classes = self.count.count_out_classes
+                    self.counted = self.count.counted
 
                     # Calculate fps (Aproximate: 25-30 FPS GEFORCE 1060 Max-Q Design)
                     fps = 1 / (self.detection.det_delta_time +
@@ -204,7 +215,15 @@ class YoloSortCount():
                         self.out_frame = self.tracking.ds_out_frame
 
                         # draw ROI
-                        #draw_roi(roi, roi_color, frame)
+
+                        cv2.rectangle(
+                            self.out_frame,
+                            (int(self.roi[0]), int(self.roi[1])),
+                            (int(self.roi[2]), int(self.roi[3])),
+                            color=self.roi_color,
+                            thickness=1,
+                            lineType=cv2.LINE_AA
+                        )
 
                         # draw fps
                         cv2.putText(self.out_frame, f"{fps:.3f} FPS (YOLO + SORT)", (15, 30), cv2.FONT_HERSHEY_SIMPLEX,
