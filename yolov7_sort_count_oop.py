@@ -208,8 +208,12 @@ class YoloSortCount():
             frame_count_roi += 1
 
         roi = cv2.selectROI("Load ROI", select_roi_frame)
-        roi = [roi[0],roi[1],roi[0]+roi[2], roi[1]+roi[3]]
         
+        if roi != (0,0,0,0):
+            roi = [roi[0],roi[1],roi[0]+roi[2], roi[1]+roi[3]]
+        else:
+            roi= None
+            
         cap_roi.release()
         cv2.destroyAllWindows()
 
@@ -238,13 +242,16 @@ class YoloSortCount():
         if self.show_img:
             if self.auto_load_roi:
                 logging.info('Loading ROI...')
-
                 self.roi = self.load_roi()
-
                 logging.info('ROI has been loaded.')
-        
+
         cap, self.orig_w, self.orig_h, self.orig_fps = self.load_video_capture(
             self.video_path)
+
+        if not self.roi:
+            logging.info('ROI has not loaded. Setting it up as full image...')
+            self.roi = [0, 0, self.orig_w, self.orig_h]
+            logging.info('ROI has been loaded as full image area.')
 
         if self.save_vid:
             logging.info('Loading the results capture...')
@@ -282,9 +289,6 @@ class YoloSortCount():
                                                   tracking_model, self.detection.det_out_frame, self.show_img, self.ds_color, self.names)
 
                     # Count
-                    if not self.roi:
-                        self.roi = [0, 0, self.orig_w, self.orig_h]
-
                     self.count = Count(self.tracking.ds_out_tracking,
                                        self.roi, self.names, self.count_out_classes, self.counted)
                     
