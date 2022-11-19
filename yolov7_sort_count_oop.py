@@ -36,6 +36,7 @@ class YoloSortCount():
         self.video_path = 0
 
         self.show_img = True
+        self.auto_load_roi = True
         self.ends_in_sec = None
         self.inv_h_frame = False
         self.hold_img = False
@@ -167,6 +168,29 @@ class YoloSortCount():
             raise ImportError(
                 'Error while trying to load the tracking model. Please check that.')
 
+    def load_roi(self):
+        cap_roi, _ , _, _ = self.load_video_capture(self.video_path)
+        ret, select_roi_frame = cap_roi.read()
+
+        frame_count_roi = 0
+        while frame_count_roi <= 3 and ret:
+            
+            ret, select_roi_frame = cap_roi.read()
+            
+            # To show image correctly (IE: web camera)
+            if self.inv_h_frame:
+                select_roi_frame  = cv2.flip(select_roi_frame , 1)
+            
+            frame_count_roi += 1
+
+        roi = cv2.selectROI("Load ROI", select_roi_frame)
+        roi = [roi[0],roi[1],roi[0]+roi[2], roi[1]+roi[3]]
+        
+        cap_roi.release()
+        cv2.destroyAllWindows()
+
+        return roi
+
     def run(self):
 
         # Debug
@@ -175,28 +199,37 @@ class YoloSortCount():
         
         logging.info('Setting up the device...')
         device = self.load_device(self.graphic_card)
-        logging.info('Device has setted up.')
+        logging.info('Device has been setted up.')
 
         logging.info('Loading the detection model...')
         detection_model, self.names = self.load_detection_model(
             self.model_path, device)
-        logging.info('The detection model has loaded.')
+        logging.info('The detection model has been loaded.')
 
         logging.info('Loading the tracking model...')
         tracking_model = self.load_tracking_model(
             self.deep_sort_model, self.ds_max_dist, self.ds_max_iou_distance, self.ds_max_age, self.ds_n_init, self.ds_nn_budget)
-        logging.info('The tracking model has loaded.')
+        logging.info('The tracking model has been loaded.')
 
+        if self.show_img:
+            if self.auto_load_roi:
+                logging.info('Loading ROI...')
+
+                self.roi = self.load_roi()
+
+                logging.info('ROI has been loaded.')
+        
         logging.info('Loading the video capture...')
         cap, self.orig_w, self.orig_h, self.orig_fps = self.load_video_capture(
             self.video_path)
-        logging.info('The video capture has loaded.')
+        logging.info('The video capture has been loaded.')
 
         if self.save_vid:
             logging.info('Loading the results capture...')
             result = self.load_save_vid(
                 self.save_loc, self.orig_w, self.orig_h)
-            logging.info('The results capture has laoded.')
+            logging.info('The results capture has been laoded.')
+        
 
         frame_count = 0
         total_fps = 0
@@ -298,7 +331,7 @@ class YoloSortCount():
                             break
                         else:
                             if (end_ends_in_sec - start_ends_in_sec) >= self.ends_in_sec:
-                                logging.info(f'Stopping... The time exeeds the defined excecution time of {self.ends_in_sec} [seconds]...')
+                                logging.info(f'Stopping... The time exeeds the defined excecution time of {self.ends_in_sec} [seconds].')
                                 self.stopped = True
                                 break
                                         
@@ -329,9 +362,9 @@ class YoloSortCount():
 
         # Avg fps
         if frame_count > 0:
-            logging.info('Calculating the average of fps...')
+            logging.info('Calculating the average of fps of the models...')
             self.avg_fps = total_fps / frame_count
-            logging.info(f'The average of fps is: {round(self.avg_fps,2)} [fps]')
+            logging.info(f'The average of fps of the models is: {round(self.avg_fps,2)} [fps]')
 
         # Close all windows
         if self.show_img:
