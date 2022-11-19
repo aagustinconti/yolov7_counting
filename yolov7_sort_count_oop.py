@@ -10,6 +10,9 @@ from deep_sort.deep_sort import DeepSort
 # Basics
 import cv2
 
+# Logs
+import logging
+
 # Classes
 from detection_oop import YoloDetect
 from deepsort_oop import DeepSortTrack
@@ -75,6 +78,13 @@ class YoloSortCount():
 
         self.count_out_classes = {}
         self.counted = []
+
+        # Logs
+        logging.basicConfig(format='%(asctime)s | %(levelname)s: %(message)s', level=logging.NOTSET)
+
+        self.show_detection = False
+        self.show_tracking = False
+        self.show_count = False
 
     def load_device(self, graphic_card):
 
@@ -151,20 +161,34 @@ class YoloSortCount():
 
     def run(self):
 
+        # Debug
+        if self.show_configs:
+            logging.info(f'\n{self.__str__()}')    
+        
+        logging.info('Setting up the device...')
         device = self.load_device(self.graphic_card)
+        logging.info('Device has setted up.')
 
+        logging.info('Loading the detection model...')
         detection_model, self.names = self.load_detection_model(
             self.model_path, device)
+        logging.info('The detection model has loaded.')
 
+        logging.info('Loading the tracking model...')
         tracking_model = self.load_tracking_model(
             self.deep_sort_model, self.ds_max_dist, self.ds_max_iou_distance, self.ds_max_age, self.ds_n_init, self.ds_nn_budget)
+        logging.info('The tracking model has loaded.')
 
+        logging.info('Loading the video capture...')
         cap, self.orig_w, self.orig_h, self.orig_fps = self.load_video_capture(
             self.video_path)
+        logging.info('The video capture has loaded.')
 
         if self.save_vid:
+            logging.info('Loading the results capture...')
             result = self.load_save_vid(
                 self.save_loc, self.orig_w, self.orig_h)
+            logging.info('The results capture has laoded.')
 
         frame_count = 0
         total_fps = 0
@@ -209,6 +233,14 @@ class YoloSortCount():
                     total_fps += fps
                     frame_count += 1
 
+                    # Debug
+                    if self.show_detection:
+                        logging.debug(f'\n{self.detection.__str__()}')
+                    if self.show_tracking:
+                        logging.debug(f'\n{self.tracking.__str__()}')
+                    if self.show_count:
+                        logging.debug(f'\n{self.count.__str__()}')
+
                     # Show the processed frame
                     if self.show_img:
 
@@ -251,7 +283,7 @@ class YoloSortCount():
                 break
 
             if self.save_vid:
-                result.write(self.frame)
+                result.write(self.out_frame)
 
         # Close the videocapture
         cap.release()
@@ -270,37 +302,34 @@ class YoloSortCount():
 
     def __str__(self):
 
-        if self.show_configs:
 
-            return_str = f"""\n
+        return_str = f"""\n
 
-            Video path selected: {str(self.video_path)}\n\n
-            
-            Show image: {str(self.show_img)}\n
-            Invert frame: {str(self.inv_h_frame)}\n
-            Hold image: {str(self.hold_img)}\n\n
+        Video path selected: {str(self.video_path)}\n\n
+        
+        Show image: {str(self.show_img)}\n
+        Invert frame: {str(self.inv_h_frame)}\n
+        Hold image: {str(self.hold_img)}\n\n
 
-            Save results: {str(self.save_vid)}\n
-            Results path: {str(self.save_loc)}\n\n
+        Save results: {str(self.save_vid)}\n
+        Results path: {str(self.save_loc)}\n\n
 
-            Detection model path selected: {str(self.model_path)}\n
-            Graphic card selected: {str(self.graphic_card)}\n
-            Class Id's selected: {str(self.class_ids)}\n\n
-            Model image size selected: {str(self.img_sz)}\n
-            Detection color selected: {str(self.color)}\n
-            Detection confidence threshold selected: {str(self.conf_thres)}\n\n
+        Detection model path selected: {str(self.model_path)}\n
+        Graphic card selected: {str(self.graphic_card)}\n
+        Class Id's selected: {str(self.class_ids)}\n\n
+        Model image size selected: {str(self.img_sz)}\n
+        Detection color selected: {str(self.color)}\n
+        Detection confidence threshold selected: {str(self.conf_thres)}\n\n
 
-            ROI selected: {str(self.roi)}\n
-            ROI color selected: {str(self.roi_color)}\n\n
+        ROI selected: {str(self.roi)}\n
+        ROI color selected: {str(self.roi_color)}\n\n
 
-            Deep Sort model selected: {str(self.deep_sort_model)}\n
-            Deep Sort max. distance selected: {str(self.ds_max_dist)}\n
-            Deep Sort max. age selected: {str(self.ds_max_age)}\n
-            Deep Sort color selected: {str(self.ds_color)}\n\n
+        Deep Sort model selected: {str(self.deep_sort_model)}\n
+        Deep Sort max. distance selected: {str(self.ds_max_dist)}\n
+        Deep Sort max. age selected: {str(self.ds_max_age)}\n
+        Deep Sort color selected: {str(self.ds_color)}\n\n
 
-            """
+        """
 
-            return return_str
+        return return_str
 
-        else:
-            pass
