@@ -72,14 +72,17 @@ class YoloSortCount():
 
         self.out_frame = None
 
+        # Detection
         self.detection = None
         self.tracking = None
         self.count = None
 
+
+        # Count
         self.count_out_classes = {}
         self.counted = []
 
-        # Logs
+        # Debug
         logging.basicConfig(format='%(asctime)s | %(levelname)s: %(message)s', level=logging.NOTSET)
 
         self.show_detection = False
@@ -283,22 +286,35 @@ class YoloSortCount():
                 break
 
             if self.save_vid:
+                logging.info('Writting the results...')
                 result.write(self.out_frame)
+                logging.info('The result video has been written.')
+
+        # Stopped
+        logging.info(f'Stopped manually: {self.stopped}')
 
         # Close the videocapture
+        logging.info('Releasing capture...')
         cap.release()
+        logging.info('The capture has been released.')
 
         # To save the video
         if self.save_vid:
+            logging.info('Releasing results capture...')
             result.release()
+            logging.info('The results capture has been released.')
 
         # Avg fps
         if frame_count > 0:
+            logging.info('Calculating the average of fps...')
             self.avg_fps = total_fps / frame_count
+            logging.info(f'The average of fps is: {round(self.avg_fps,2)} [fps]')
 
         # Close all windows
         if self.show_img:
+            logging.info('Destroying all windows...')
             cv2.destroyAllWindows()
+            logging.info('All windows has been destroyed.')
 
     def __str__(self):
 
