@@ -86,18 +86,25 @@ class YoloSortCount():
         self.tracking = None
         self.count = None
 
-
         # Count
         self.count_out_classes = {}
         self.counted = []
 
         # Debug
-        logging.basicConfig(format='%(asctime)s | %(levelname)s: %(message)s', level=logging.NOTSET)
+        logging.basicConfig(
+            format='%(asctime)s | %(levelname)s: %(message)s', level=logging.NOTSET)
 
         self.show_detection = False
         self.show_tracking = False
         self.show_count = False
 
+        # Plots
+
+        self.plot_xmin = 10
+        self.plot_ymin = 10
+        self.plot_padding = 2
+        self.plot_text_color = (255, 255, 255)
+        self.plot_bgr_color = (0, 0, 0)
 
     def load_device(self, graphic_card):
 
@@ -112,7 +119,7 @@ class YoloSortCount():
     def load_video_capture(self, video_path):
 
         try:
-            
+
             logging.info('Loading the video capture...')
 
             if "https://www.youtube.com/" in str(video_path):
@@ -120,8 +127,9 @@ class YoloSortCount():
                 logging.info('YouTube video detected as source.')
                 video = pafy.new(video_path)
                 logging.info(f'YouTube video name: {video.title}')
-                
-                logging.info('Getting the video, remember thats maybe take a while...')
+
+                logging.info(
+                    'Getting the video, remember thats maybe take a while...')
                 best = video.getbest(preftype="mp4")
                 cap = cv2.VideoCapture(best.url)
                 logging.info('YouTube video capture has been loaded.')
@@ -131,7 +139,7 @@ class YoloSortCount():
                     logging.info('Source of the video: WebCamera')
                 else:
                     logging.info(f'Source of the video: {video_path}')
-                
+
                 cap = cv2.VideoCapture(video_path)
                 logging.info('The video capture has been loaded.')
 
@@ -193,38 +201,83 @@ class YoloSortCount():
                 'Error while trying to load the tracking model. Please check that.')
 
     def load_roi(self):
-        cap_roi, _ , _, _ = self.load_video_capture(self.video_path)
+        cap_roi, _, _, _ = self.load_video_capture(self.video_path)
         ret, select_roi_frame = cap_roi.read()
 
         frame_count_roi = 0
         while frame_count_roi <= 3 and ret:
-            
+
             ret, select_roi_frame = cap_roi.read()
-            
+
             # To show image correctly (IE: web camera)
             if self.inv_h_frame:
-                select_roi_frame  = cv2.flip(select_roi_frame , 1)
-            
+                select_roi_frame = cv2.flip(select_roi_frame, 1)
+
             frame_count_roi += 1
 
         roi = cv2.selectROI("Load ROI", select_roi_frame)
-        
-        if roi != (0,0,0,0):
-            roi = [roi[0],roi[1],roi[0]+roi[2], roi[1]+roi[3]]
+
+        if roi != (0, 0, 0, 0):
+            roi = [roi[0], roi[1], roi[0]+roi[2], roi[1]+roi[3]]
         else:
-            roi= None
-            
+            roi = None
+
         cap_roi.release()
         cv2.destroyAllWindows()
 
         return roi
 
+    def plot_text(self, frame, frame_w, fps, plot_xmin, plot_ymin, padding, counter_text, plot_text_color, plot_bgr_color):
+
+        # Save the first xmin
+        aux_xmin = plot_xmin
+
+        # FPS counter
+        label = f"FPS (YOLO + SORT): {fps:.3f}"
+        # min required space for the text
+        (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 1)
+
+        frame = cv2.rectangle(frame, (plot_xmin-padding, plot_ymin - padding), (plot_xmin +
+                              w + padding, plot_ymin + h + padding * 4), plot_text_color, cv2.FILLED)
+        frame = cv2.putText(frame, label, (plot_xmin + padding, plot_ymin + padding + h),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, plot_bgr_color, 1)  # bottom-left align
+
+        plot_ymin = plot_ymin + h + 7 * padding
+
+        # Detection elements
+        for elem in counter_text:  # [[0, 'person', 1]]
+
+            # format text -> person (ID: 0): 1
+            label = f"{elem[1]} (ID: {elem[0]}): {elem[2]}"
+            # min required space for the text
+            (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 1)
+
+            # check if is not sobrepassing the frame width
+            if (plot_xmin + w + padding * 2) < frame_w:
+
+                frame = cv2.rectangle(frame, (plot_xmin-padding, plot_ymin - padding),
+                                      (plot_xmin + w + padding, plot_ymin + h + padding * 4), plot_bgr_color, cv2.FILLED)
+                frame = cv2.putText(frame, label, (plot_xmin + padding, plot_ymin + padding + h),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, plot_text_color, 1)  # bottom-left align
+
+                plot_xmin = plot_xmin + w + padding * 4
+            else:
+                plot_xmin = aux_xmin
+                plot_ymin = plot_ymin + h + 7 * padding
+
+                frame = cv2.rectangle(frame, (plot_xmin-padding, plot_ymin - padding),
+                                      (plot_xmin + w + padding, plot_ymin + h + padding * 4), plot_bgr_color, cv2.FILLED)
+                frame = cv2.putText(frame, label, (plot_xmin + padding, plot_ymin + padding + h),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, plot_text_color, 1)  # bottom-left align
+
+        return frame
+
     def run(self):
 
         # Debug
         if self.show_configs:
-            logging.info(f'\n{self.__str__()}')    
-        
+            logging.info(f'\n{self.__str__()}')
+
         logging.info('Setting up the device...')
         device = self.load_device(self.graphic_card)
         logging.info('Device has been setted up.')
@@ -258,11 +311,10 @@ class YoloSortCount():
             result = self.load_save_vid(
                 self.save_loc, self.orig_w, self.orig_h)
             logging.info('The results capture has been laoded.')
-        
 
         frame_count = 0
         total_fps = 0
-        
+
         start_ends_in_sec = time.time()
 
         # Run detection
@@ -291,7 +343,7 @@ class YoloSortCount():
                     # Count
                     self.count = Count(self.tracking.ds_out_tracking,
                                        self.roi, self.names, self.count_out_classes, self.counted)
-                    
+
                     self.count_out_classes = self.count.count_out_classes
                     self.counted = self.count.counted
 
@@ -316,7 +368,6 @@ class YoloSortCount():
                         self.out_frame = self.tracking.ds_out_frame
 
                         # draw ROI
-
                         cv2.rectangle(
                             self.out_frame,
                             (int(self.roi[0]), int(self.roi[1])),
@@ -326,13 +377,9 @@ class YoloSortCount():
                             lineType=cv2.LINE_AA
                         )
 
-                        # draw fps
-                        cv2.putText(self.out_frame, f"{fps:.3f} FPS (YOLO + SORT)", (15, 30), cv2.FONT_HERSHEY_SIMPLEX,
-                                    0.5, self.color, 1)
-
-                        # draw counter
-                        cv2.putText(self.out_frame, f"COUNTER = {self.count.counter_text}", (15, 50), cv2.FONT_HERSHEY_SIMPLEX,
-                                    0.5, self.color, 1)
+                        # draw fps and detections 
+                        self.out_frame = self.plot_text(self.out_frame, self.orig_w, fps, self.plot_xmin, self.plot_ymin,
+                                                        self.plot_padding, self.count.counter_text, self.plot_text_color, self.plot_bgr_color)
 
                         # show the frame
                         cv2.imshow('PROCESSED FRAME', self.out_frame)
@@ -349,18 +396,19 @@ class YoloSortCount():
                                 self.stopped = True
                                 break
                     else:
-                        # ends when the time of excecution is greather than ends_in_sec 
+                        # ends when the time of excecution is greather than ends_in_sec
                         end_ends_in_sec = time.time()
-                        
+
                         if self.ends_in_sec == None:
-                            logging.critical('If show_img = False you need to define "self.ends_in_sec" [secs].')
+                            logging.critical(
+                                'If show_img = False you need to define "self.ends_in_sec" [secs].')
                             break
                         else:
                             if (end_ends_in_sec - start_ends_in_sec) >= self.ends_in_sec:
-                                logging.info(f'Stopping... The time exeeds the defined excecution time of {self.ends_in_sec} [seconds].')
+                                logging.info(
+                                    f'Stopping... The time exeeds the defined excecution time of {self.ends_in_sec} [seconds].')
                                 self.stopped = True
                                 break
-                                        
 
             else:
                 logging.info('The video has finished.')
@@ -390,7 +438,8 @@ class YoloSortCount():
         if frame_count > 0:
             logging.info('Calculating the average of fps of the models...')
             self.avg_fps = total_fps / frame_count
-            logging.info(f'The average of fps of the models is: {round(self.avg_fps,2)} [fps]')
+            logging.info(
+                f'The average of fps of the models is: {round(self.avg_fps,2)} [fps]')
 
         # Close all windows
         if self.show_img:
@@ -399,7 +448,6 @@ class YoloSortCount():
             logging.info('All windows has been destroyed.')
 
     def __str__(self):
-
 
         return_str = f"""\n
 
@@ -430,4 +478,3 @@ class YoloSortCount():
         """
 
         return return_str
-
