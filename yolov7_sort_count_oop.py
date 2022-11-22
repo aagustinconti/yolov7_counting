@@ -67,7 +67,9 @@ class YoloSortCount():
         self.ds_nn_budget = 100
         self.ds_color = (0, 0, 255)
 
-        self.show_configs = False
+        self.max_fps = 25
+        self.max_width = 720
+
 
         # Pre defined
         self.names = None
@@ -94,6 +96,7 @@ class YoloSortCount():
         logging.basicConfig(
             format='%(asctime)s | %(levelname)s: %(message)s', level=logging.NOTSET)
 
+        self.show_configs = False
         self.show_detection = False
         self.show_tracking = False
         self.show_count = False
@@ -145,7 +148,20 @@ class YoloSortCount():
 
             orig_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             orig_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+            orig_ratio = orig_h / orig_w
+
+            if orig_w > self.max_width:
+                logging.info('Capture has more width than max. width allowed. Rezising...')
+                cap = self.change_res(cap, self.max_width, orig_ratio)
+                
+                orig_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                orig_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+                logging.info(f'Capture has been resized to {(orig_w,orig_h)}')
+
             orig_fps = cap.get(cv2.CAP_PROP_FPS) % 100
+
 
             return cap, orig_w, orig_h, orig_fps
 
@@ -157,7 +173,7 @@ class YoloSortCount():
 
         try:
 
-            result = cv2.VideoWriter(save_loc+'.avi',
+            result = cv2.VideoWriter(save_loc+'.mp4',
                                      cv2.VideoWriter_fourcc(*'MJPG'),
                                      10, (orig_w, orig_h))
             return result
@@ -204,16 +220,16 @@ class YoloSortCount():
         cap_roi, _, _, _ = self.load_video_capture(self.video_path)
         ret, select_roi_frame = cap_roi.read()
 
-        frame_count_roi = 0
-        while frame_count_roi <= 3 and ret:
+        if not self.hold_img:
+            frame_count_roi = 0
+            while frame_count_roi <= 3 and ret:
 
-            ret, select_roi_frame = cap_roi.read()
-
-            # To show image correctly (IE: web camera)
-            if self.inv_h_frame:
-                select_roi_frame = cv2.flip(select_roi_frame, 1)
-
-            frame_count_roi += 1
+                ret, select_roi_frame = cap_roi.read()
+                frame_count_roi += 1
+        
+        # To show image correctly (IE: web camera)
+        if self.inv_h_frame:
+            select_roi_frame = cv2.flip(select_roi_frame, 1)
 
         roi = cv2.selectROI("Load ROI", select_roi_frame)
 
@@ -233,7 +249,7 @@ class YoloSortCount():
         aux_xmin = plot_xmin
 
         # FPS counter
-        label = f"FPS (YOLO + SORT): {fps:.3f}"
+        label = f"FPS (YOLOv7x + SORT): {fps:.3f}"
         # min required space for the text
         (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 1)
 
@@ -271,6 +287,14 @@ class YoloSortCount():
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, plot_text_color, 1)  # bottom-left align
 
         return frame
+
+
+    def change_res(self, cap, max_width, orig_ratio):
+        
+        cap.set(3,max_width)
+        cap.set(4, int(max_width * orig_ratio))
+
+        return cap
 
     def run(self):
 
@@ -391,7 +415,7 @@ class YoloSortCount():
                                 self.stopped = True
                                 break
                         else:
-                            if cv2.waitKey(1) & 0xFF == ord('q'):
+                            if cv2.waitKey(int(1000/self.max_fps)) & 0xFF == ord('q'):
                                 logging.info('Exiting by keyboard...')
                                 self.stopped = True
                                 break
@@ -416,9 +440,7 @@ class YoloSortCount():
                 break
 
             if self.save_vid:
-                logging.info(f'Writting the results in {self.save_loc}...')
                 result.write(self.out_frame)
-                logging.info('The result video has been written.')
 
         # Stopped
         logging.info(f'Stopped manually: {self.stopped}')
