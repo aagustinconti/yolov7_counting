@@ -31,14 +31,17 @@
 
 echo "Checking if the Image already exists..."
 
-if [[ "$(docker image inspect yolov7_detect_track_count:latest 2> /dev/null)" == "" ]]; then
+if [[ "$(docker image inspect yolov7_detect_track_count:latest 2> /dev/null)" == [] ]];
 
+then
     echo "The image doesn't exist. Building the Docker Image..."
 
     cd ./dependencies
     docker build -t yolov7_detect_track_count .
     cd ..
 
+else
+    echo "The image has already exists."
 fi
 
 
