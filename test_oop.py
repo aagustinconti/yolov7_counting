@@ -1,6 +1,5 @@
 from yolov7_sort_count_oop import YoloSortCount
-import time
-import cv2
+
 
 # Test
 test = YoloSortCount()
@@ -30,11 +29,11 @@ test.class_ids = [0]
 test.conf_thres = 0.5
 
 # Frame
-test.inv_h_frame = False
+test.inv_h_frame = True
 
 # Save
 test.save_loc = "results/test_test"
-test.save_vid = True
+test.save_vid = False
 
 # Run
 test.run()
