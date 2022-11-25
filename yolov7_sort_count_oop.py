@@ -1,4 +1,4 @@
-# https://learnopencv.com/yolov7-object-detection-paper-explanation-and-inference/
+# https://github.com/WongKinYiu/yolov7/
 
 # Pytorch
 import torch
