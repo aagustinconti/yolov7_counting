@@ -39,7 +39,7 @@ In addition to the detections, **it has been possible to track these objects and
 
 ### Test environment
 
-I’ve done test with:
+I’ve done tests with:
 
 - **PC:** HP-OMEN ce004-la
 - **GPU:** NVIDIA 1060 MAX-Q DESIGN 6GB
@@ -66,7 +66,6 @@ I’ve done test with:
 - You can **re-train the detection model with your own class/classes** and run the program.
 - You can add an **visual interface.**
 - You can **collaborate on this repository** integrating new features or solving bugs!
-- 
 
 ---
 ## Try it yourself. Do a test!
