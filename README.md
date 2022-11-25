@@ -31,7 +31,7 @@ In addition to the detections, **it has been possible to track these objects and
 - One class
     - Source: YouTube
     - Invert Frame: False
-    - Classes: car → [0]
+    - Classes: car → [2]
 
 
 ![Test Cars](readme-img/test_cars.gif)
