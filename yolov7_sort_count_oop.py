@@ -70,7 +70,6 @@ class YoloSortCount():
         self.max_fps = 25
         self.max_width = 720
 
-
         # Pre defined
         self.names = None
 
@@ -110,6 +109,11 @@ class YoloSortCount():
         self.plot_bgr_color = (0, 0, 0)
 
     def load_device(self, graphic_card):
+        """
+        WHAT IT DOES:
+            - Load the torch device.
+
+        """
 
         try:
             device = torch.device("cuda:"+str(graphic_card))
@@ -120,6 +124,12 @@ class YoloSortCount():
                 'Error while trying to use Graphic Card. Please check that it is available.')
 
     def load_video_capture(self, video_path):
+        """
+        WHAT IT DOES:
+            - Load the video capture.
+            - Resize the frames.
+
+        """
 
         try:
 
@@ -152,16 +162,16 @@ class YoloSortCount():
             orig_ratio = orig_h / orig_w
 
             if orig_w > self.max_width:
-                logging.info('Capture has more width than max. width allowed. Rezising...')
+                logging.info(
+                    'Capture has more width than max. width allowed. Rezising...')
                 cap = self.change_res(cap, self.max_width, orig_ratio)
-                
+
                 orig_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
                 orig_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
                 logging.info(f'Capture has been resized to {(orig_w,orig_h)}')
 
             orig_fps = cap.get(cv2.CAP_PROP_FPS) % 100
-
 
             return cap, orig_w, orig_h, orig_fps
 
@@ -170,6 +180,11 @@ class YoloSortCount():
                 'Error while trying read the video. Please check that.')
 
     def load_save_vid(self, save_loc, orig_w, orig_h):
+        """
+        WHAT IT DOES:
+            - Load the result writer.
+
+        """
 
         try:
 
@@ -183,6 +198,11 @@ class YoloSortCount():
                 'Error while trying write the results. Please check that.')
 
     def load_detection_model(self, model_path, device):
+        """
+        WHAT IT DOES:
+            - Load the detection model and extracting the names of the classes and the model.
+
+        """
 
         try:
             # Load all characteristics of YOLOv7x model
@@ -204,6 +224,12 @@ class YoloSortCount():
                 'Error while trying to load the detection model. Please check that.')
 
     def load_tracking_model(self, deep_sort_model, max_dist, max_iou_distance, max_age, n_init, nn_budget):
+        """
+        WHAT IT DOES:
+            - To load the tracking model
+
+        """
+
         try:
             deepsort = DeepSort(deep_sort_model,
                                 max_dist=max_dist,
@@ -217,6 +243,12 @@ class YoloSortCount():
                 'Error while trying to load the tracking model. Please check that.')
 
     def load_roi(self):
+        """
+        WHAT IT DOES:
+            - To select the ROI, interactive way.
+
+        """
+
         cap_roi, _, _, _ = self.load_video_capture(self.video_path)
         ret, select_roi_frame = cap_roi.read()
 
@@ -226,7 +258,7 @@ class YoloSortCount():
 
                 ret, select_roi_frame = cap_roi.read()
                 frame_count_roi += 1
-        
+
         # To show image correctly (IE: web camera)
         if self.inv_h_frame:
             select_roi_frame = cv2.flip(select_roi_frame, 1)
@@ -244,6 +276,11 @@ class YoloSortCount():
         return roi
 
     def plot_text(self, frame, frame_w, fps, plot_xmin, plot_ymin, padding, counter_text, plot_text_color, plot_bgr_color):
+        """
+        WHAT IT DOES:
+            - Plot text into the output frame
+
+        """
 
         # Save the first xmin
         aux_xmin = plot_xmin
@@ -288,15 +325,24 @@ class YoloSortCount():
 
         return frame
 
-
     def change_res(self, cap, max_width, orig_ratio):
-        
-        cap.set(3,max_width)
+        """
+        WHAT IT DOES:
+            - Change te resolution of the frame.
+
+        """
+
+        cap.set(3, max_width)
         cap.set(4, int(max_width * orig_ratio))
 
         return cap
 
     def run(self):
+        """
+        WHAT IT DOES:
+            - Run the entire process of detection > tracking > count.
+
+        """
 
         # Debug
         if self.show_configs:
@@ -401,7 +447,7 @@ class YoloSortCount():
                             lineType=cv2.LINE_AA
                         )
 
-                        # draw fps and detections 
+                        # draw fps and detections
                         self.out_frame = self.plot_text(self.out_frame, self.orig_w, fps, self.plot_xmin, self.plot_ymin,
                                                         self.plot_padding, self.count.counter_text, self.plot_text_color, self.plot_bgr_color)
 

@@ -57,7 +57,6 @@ class DeepSortTrack():
             raise ImportError(
                 'Error while trying instantiate the tracking object. Please check that.')
 
-
     def xyxy2xywh(self, x):
         """
         WHAT IT DOES:

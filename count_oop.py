@@ -1,7 +1,7 @@
 
 
 class Count():
-    def __init__(self, ds_output, roi, names, count_out_classes,counted) -> None:
+    def __init__(self, ds_output, roi, names, count_out_classes, counted) -> None:
 
         self.count_out_classes = count_out_classes
         self.counted = counted

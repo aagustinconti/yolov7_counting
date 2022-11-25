@@ -97,9 +97,12 @@ class YoloDetect():
             raise ImportError(
                 'Error while trying instantiate the detection object. Please check that.')
 
-    
-
     def scale_coords_custom(self, img1_shape, coords, img0_shape):
+        """
+        WHAT IT DOES:
+            - Scale cords obtained from the model to the original frame.
+
+        """
 
         gain = min(img1_shape[0] / img0_shape[0],
                    img1_shape[1] / img0_shape[1])  # gain  = old / new
@@ -115,6 +118,11 @@ class YoloDetect():
         return coords
 
     def draw_bbox(self, frame, coords, color, names, confidence):
+        """
+        WHAT IT DOES:
+            - To draw the detection bboxes and text.
+
+        """
 
         # draw bounding box
         frame = cv2.rectangle(

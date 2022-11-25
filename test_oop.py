@@ -1,11 +1,10 @@
 from yolov7_sort_count_oop import YoloSortCount
 
-#################### TEST #################### 
+#################### TEST ####################
 
 # INSTANCIATE
 
 test = YoloSortCount()
-
 
 
 """
@@ -17,7 +16,7 @@ RSTP Stream:
 Local video: "img_bank/cows_for_sale.mp4"
 Local image: "img_bank/img.jpg" | "img_bank/img.png" 
 """
-test.video_path = "https://www.youtube.com/watch?v=emI8r2dfk6g"
+test.video_path = 0
 
 
 """
@@ -28,9 +27,8 @@ test.video_path = "https://www.youtube.com/watch?v=emI8r2dfk6g"
 - Invert the image (In case of your WebCamera is mirrored, IE)	
 """
 test.max_width = 720
-test.max_fps = 25 #Max 1000
-test.inv_h_frame = False
-
+test.max_fps = 25  # Max 1000
+test.inv_h_frame = True
 
 
 """
@@ -57,7 +55,6 @@ test.auto_load_roi = True
 test.roi_color = (255, 255, 255)
 
 
-
 """
 ###### DETECTION MODEL ###### 
 
@@ -71,7 +68,7 @@ test.roi_color = (255, 255, 255)
 """
 test.model_path = 'pretrained_weights/yolov7.pt'
 test.graphic_card = 0
-test.class_ids = [0,2]
+test.class_ids = [0]
 test.img_sz = 640
 test.color = (0, 255, 0)
 test.conf_thres = 0.5
@@ -113,7 +110,6 @@ test.plot_text_color = (255, 255, 255)
 test.plot_bgr_color = (0, 0, 0)
 
 
-
 """
 ###### DEBUG TEXT ###### 
 
@@ -133,8 +129,8 @@ test.show_count = False
 - Select if you want to save the results
 - Select a location to save the results
 """
-test.save_vid = True
-test.save_loc = "results/messi"
+test.save_vid = False
+test.save_loc = "results/result"
 
 
 # Run
