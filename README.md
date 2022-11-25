@@ -133,7 +133,7 @@ sudo chmod +x ./start.sh
 To build the docker image if is not available in your PC and run the container with the propp
 
 ```bash
-run ./start.sh
+./start.sh
 ```
 
 ### Configuring the test
