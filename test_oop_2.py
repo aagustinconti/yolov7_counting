@@ -16,7 +16,7 @@ RSTP Stream: "http://192.168.102.3:4747/video"
 Local video: "img_bank/cows_for_sale.mp4"
 Local image: "img_bank/img.jpg" | "img_bank/img.png" 
 """
-test.video_path = 0 #"http://192.168.102.3:4747/video"
+test.video_path = "http://192.168.102.3:4747/video"
 
 
 """
@@ -51,7 +51,7 @@ test.hold_img = False
 - Load the ROI color.	
 """
 #test.roi = [0,0,0,0]
-test.auto_load_roi = False
+test.auto_load_roi = True
 test.roi_color = (255, 255, 255)
 
 

@@ -158,12 +158,14 @@ class YoloSortCount():
 
             orig_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             orig_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            
 
-            orig_ratio = orig_h / orig_w
-
-            if orig_w > self.max_width:
+            if orig_w > self.max_width and orig_w != 0 :
                 logging.info(
                     'Capture has more width than max. width allowed. Rezising...')
+                
+                orig_ratio = orig_h / orig_w
+                
                 cap = self.change_res(cap, self.max_width, orig_ratio)
 
                 orig_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
