@@ -12,11 +12,11 @@ test = YoloSortCount()
 WebCamera: 0 ---> DEFAULT
 Youtube Video or stream: "https://www.youtube.com/watch?v=qP1y7Tdab7Y"
 Stream URL:  "http://IP/hls/stream_src.m3u8"
-RSTP Stream: 
+RSTP Stream: "http://192.168.1.3:4747/video"
 Local video: "img_bank/cows_for_sale.mp4"
 Local image: "img_bank/img.jpg" | "img_bank/img.png" 
 """
-test.video_path = 0
+test.video_path = 0#"https://www.youtube.com/watch?v=2wqpy036z24"
 
 
 """
