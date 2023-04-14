@@ -153,8 +153,9 @@ class Upsample(Module):
         self.recompute_scale_factor = recompute_scale_factor
 
     def forward(self, input: Tensor) -> Tensor:
-        return F.interpolate(input, self.size, self.scale_factor, self.mode, self.align_corners)
-                              #recompute_scale_factor=self.recompute_scale_factor)
+        return F.interpolate(input, self.size, self.scale_factor, self.mode, self.align_corners,
+                             #recompute_scale_factor=self.recompute_scale_factor
+			     )
 
     def extra_repr(self) -> str:
         if self.scale_factor is not None:
