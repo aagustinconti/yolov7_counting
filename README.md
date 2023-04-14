@@ -20,11 +20,11 @@ In addition to the detections, **it has been possible to track these objects and
 
 ### Information flow
 
-![Information flow](readme-img/Untitled.png)
+![Information flow](readme-img/graph_1.png)
 
 ### Count algorithm
 
-![Count Algorithm](readme-img/Untitled%201.png)
+![Count Algorithm](readme-img/graph_2.png)
 
 ## Results
 
@@ -105,7 +105,7 @@ Do this following steps *in order.*
     nvtop # To run the nvtop
     ```
 
-    ![nvidia-smi](/readme-img/Untitled%202.png)
+    ![nvidia-smi](/readme-img/nvidia-smi.png)
 
 **Pull nvidia-gpu image**
 
@@ -117,26 +117,14 @@ Follow this  **[installation guide.](https://docs.nvidia.com/datacenter/cloud-na
 git pull https://github.com/aagustinconti/yolov7_counting
 ```
 
-**Change permissions of ./start.sh**
-
-```bash
-sudo chmod +x ./start.sh
-```
 
 **Download YOLOv7x pretrained weights**
 
 1. Download the pretrained weights of YOLOv7x [here.](https://github.com/WongKinYiu/yolov7/blob/main/README.md#performance)
 2. Save them in **./pretrained_weights** directory.
 
-**RUN ./start.sh**
 
-To build the docker image if is not available in your PC and run the container with the propp
-
-```bash
-./start.sh
-```
-
-### Configuring the test
+**Configuring the test**
 
 - Into the **test_oop.py** file you can modify some characteristics of the instance of the class *YoloSortCount()* before to execute the *run()* method.
     - By default:
@@ -145,13 +133,16 @@ To build the docker image if is not available in your PC and run the container w
         - Classes: person (ID: 0)
         - Save: False
 
-**RUN the test**
 
-On the docker terminal run
+**RUN docker_control.py**
+
+To build the docker image if it's not available in your PC and run the container with the propp
 
 ```bash
- python test_oop.py
+python3 docker_control.py
 ```
+
+
 
 
 ## Thanks to

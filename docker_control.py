@@ -23,13 +23,20 @@ client = docker.from_env()
 
 logging.info("Checking if the Image already exists...")
 
-if not os.system('[ "$(docker image inspect yolov7_detect_track_count:latest 2> /dev/null)" == [] ]'):
+if str(os.popen("docker image inspect yolov7_detect_track_count:latest 2> /dev/null").read())[:2] == "[]":
 
     logging.info("The image doesn't exist. Building the Docker Image...")
 
-    os.system("cd ./dependencies")
+    os.chdir("./dependencies")
+    
+    cwd = os.getcwd()
+    logging.info(f"The current directory is --> {cwd}")
+    
     os.system("docker build -t yolov7_detect_track_count .")
-    os.system("cd ..")
+    os.chdir("..")
+    
+    cwd = os.getcwd()
+    logging.info(f"The current directory is --> {cwd}")
 
 else:
     logging.info("The image has already exists.")
@@ -41,9 +48,15 @@ os.system("xhost +")
 
 
 logging.info("Running a container...")
+
+
 container = client.containers.run(
     image='yolov7_detect_track_count:latest',
+    stdin_open=True,
+    tty=True,
     auto_remove=True,
+    network_mode='host',
+    name="test",
     device_requests=[docker.types.DeviceRequest(
         device_ids=["0"], capabilities=[['gpu']])],
     devices=["/dev/video0:/dev/video0"],
@@ -52,6 +65,5 @@ container = client.containers.run(
         cwd: {'bind': '/workspace', 'mode': 'rw'}
     },
     environment=[f"DISPLAY={display}"],
-    tty=True,
     command='python test_oop.py'
 )

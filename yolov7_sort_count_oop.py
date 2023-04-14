@@ -26,10 +26,6 @@ from deepsort_oop import DeepSortTrack
 from count_oop import Count
 
 
-"""
-
-
-"""
 
 
 class YoloSortCount():
@@ -67,7 +63,6 @@ class YoloSortCount():
         self.ds_nn_budget = 100
         self.ds_color = (0, 0, 255)
 
-        self.max_fps = 25
         self.max_width = 720
 
         # Pre defined
@@ -75,6 +70,7 @@ class YoloSortCount():
 
         self.orig_w = None
         self.orig_h = None
+        self.orig_ratio = None
         self.orig_fps = None
 
         self.stopped = False
@@ -93,7 +89,7 @@ class YoloSortCount():
 
         # Debug
         logging.basicConfig(
-            format='%(asctime)s | %(levelname)s: %(message)s', level=logging.NOTSET)
+            format='%(asctime)s | %(levelname)s: %(message)s', level=logging.INFO)
 
         self.show_configs = False
         self.show_detection = False
@@ -154,28 +150,18 @@ class YoloSortCount():
                     logging.info(f'Source of the video: {video_path}')
 
                 cap = cv2.VideoCapture(video_path)
+                
+                # To discard delayed frames
+                cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                
                 logging.info('The video capture has been loaded.')
 
             orig_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             orig_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            
-
-            if orig_w > self.max_width and orig_w != 0 :
-                logging.info(
-                    'Capture has more width than max. width allowed. Rezising...')
-                
-                orig_ratio = orig_h / orig_w
-                
-                cap = self.change_res(cap, self.max_width, orig_ratio)
-
-                orig_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-                orig_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
-                logging.info(f'Capture has been resized to {(orig_w,orig_h)}')
-
+            orig_ratio = orig_w / orig_h
             orig_fps = cap.get(cv2.CAP_PROP_FPS) % 100
 
-            return cap, orig_w, orig_h, orig_fps
+            return cap, orig_w, orig_h, orig_ratio, orig_fps
 
         except Exception as err:
             raise ImportError(
@@ -233,6 +219,7 @@ class YoloSortCount():
         """
 
         try:
+            logging.info('This step may take a while...')
             deepsort = DeepSort(deep_sort_model,
                                 max_dist=max_dist,
                                 max_iou_distance=max_iou_distance,
@@ -250,16 +237,27 @@ class YoloSortCount():
             - To select the ROI, interactive way.
 
         """
-
-        cap_roi, _, _, _ = self.load_video_capture(self.video_path)
+        cap_roi, _, _,_,_= self.load_video_capture(self.video_path)
+        
+        orig_w_roi = int(cap_roi.get(cv2.CAP_PROP_FRAME_WIDTH))
+        orig_h_roi = int(cap_roi.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        orig_ratio_roi = orig_w_roi / orig_h_roi
+        
         ret, select_roi_frame = cap_roi.read()
-
+      
+        # To avoid the camera delay
         if not self.hold_img:
             frame_count_roi = 0
             while frame_count_roi <= 3 and ret:
 
                 ret, select_roi_frame = cap_roi.read()
                 frame_count_roi += 1
+
+        
+        # To adjust to the max width
+        if (self.max_width !=None) and (orig_w_roi != 0) and (orig_w_roi > self.max_width):                
+                select_roi_frame = cv2.resize(select_roi_frame,(int(self.max_width), int(self.max_width/orig_ratio_roi)))
+        
 
         # To show image correctly (IE: web camera)
         if self.inv_h_frame:
@@ -327,17 +325,6 @@ class YoloSortCount():
 
         return frame
 
-    def change_res(self, cap, max_width, orig_ratio):
-        """
-        WHAT IT DOES:
-            - Change te resolution of the frame.
-
-        """
-
-        cap.set(3, max_width)
-        cap.set(4, int(max_width * orig_ratio))
-
-        return cap
 
     def run(self):
         """
@@ -370,7 +357,7 @@ class YoloSortCount():
                 self.roi = self.load_roi()
                 logging.info('ROI has been loaded.')
 
-        cap, self.orig_w, self.orig_h, self.orig_fps = self.load_video_capture(
+        cap, self.orig_w, self.orig_h, self.orig_ratio, self.orig_fps = self.load_video_capture(
             self.video_path)
 
         if not self.roi:
@@ -389,15 +376,24 @@ class YoloSortCount():
 
         start_ends_in_sec = time.time()
 
+
         # Run detection
         while (cap.isOpened()):
-
-            # Get frame
+            
+            # Get frame (The slow streaming video capture 
+            # can be resolved by:
+            # https://stackoverflow.com/questions/58293187/opencv-real-time-streaming-video-capture-is-slow-how-to-drop-frames-or-get-sync )
+            
             ret, self.frame = cap.read()
+
+            # To resize frames
+            if (self.max_width !=None) and (self.orig_w != 0) and (self.orig_w > self.max_width):                
+                self.frame = cv2.resize(self.frame,(int(self.max_width), int(self.max_width/self.orig_ratio)))
 
             # To show image correctly (IE: web camera)
             if self.inv_h_frame:
                 self.frame = cv2.flip(self.frame, 1)
+
 
             # If the video has not finished yet
             if ret:
@@ -463,7 +459,7 @@ class YoloSortCount():
                                 self.stopped = True
                                 break
                         else:
-                            if cv2.waitKey(int(1000/self.max_fps)) & 0xFF == ord('q'):
+                            if cv2.waitKey(1) & 0xFF == ord('q'):
                                 logging.info('Exiting by keyboard...')
                                 self.stopped = True
                                 break
